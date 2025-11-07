@@ -16,22 +16,22 @@ def read_instance(file_path):
 
         data["n"], data["H"], data["C"] = map(int, file.readline().split())
 
-        index, x, y, B_0, r_0, h_0 = file.readline().split()
+        index, x, y, B_i, r_i, h_0 = file.readline().split()
         data["supplier"]["index"] = int(index)
         data["supplier"]["x"] = float(x)
         data["supplier"]["y"] = float(y)
-        data["supplier"]["B_0"] = int(B_0)
-        data["supplier"]["r_0"] = int(r_0)
-        data["supplier"]["h_0"] = float(h_0)
+        data["supplier"]["B_i"] = int(B_i)
+        data["supplier"]["r_i"] = int(r_i)
+        data["supplier"]["h_i"] = float(h_0)
 
         for _ in range(data["n"] - 1):
-            index, x, y, I_i0, U_i, L_i, r_i, h_i = file.readline().split()
+            index, x, y, I_i, U_i, L_i, r_i, h_i = file.readline().split()
             data["customers"].append(
                 {
                     "index": int(index),
                     "x": float(x),
                     "y": float(y),
-                    "I_i0": int(I_i0),
+                    "I_i": int(I_i),
                     "U_i": int(U_i),
                     "L_i": int(L_i),
                     "r_i": int(r_i),
@@ -41,16 +41,16 @@ def read_instance(file_path):
 
         data["distance_matrix"] = []
 
-        for customer_i in [data["supplier"]] + data["customers"]:
+        for location_i in [data["supplier"]] + data["customers"]:
             distance_row = []
 
-            for customer_j in [data["supplier"]] + data["customers"]:
+            for location_j in [data["supplier"]] + data["customers"]:
                 distance_row.append(
                     distance_between(
-                        customer_i["x"],
-                        customer_j["x"],
-                        customer_i["y"],
-                        customer_j["y"],
+                        location_i["x"],
+                        location_j["x"],
+                        location_i["y"],
+                        location_j["y"],
                     )
                 )
 
