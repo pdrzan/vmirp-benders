@@ -1,5 +1,6 @@
 import sys
 from instance import read_instance
+from model import optimize
 
 
 def main():
@@ -25,6 +26,7 @@ def main():
 
     instance_file_path = arguments["-i"]
     data = read_instance(instance_file_path)
+    result = optimize(data)
 
 
 if __name__ == "__main__":
