@@ -7,8 +7,8 @@ solved_bsp = {}
 
 def optimize(data):
     vehicle_capacity = data["C"]
-    time_horizon = range(data["H"])
-    time_horizon_ = range(data["H"] + 1)
+    time_horizon = range(data["H"] + 1)
+    time_horizon_ = range(data["H"] + 2)
     customers = data["customers"]
     supplier = data["supplier"]
 
@@ -49,11 +49,11 @@ def optimize(data):
 
     model.setObjective(
         (
-            gp.quicksum(supplier["h_i"] * B_t[time] for time in time_horizon_)
+            gp.quicksum(supplier["h_i"] * B_t[time] for time in time_horizon_[1:])
             + gp.quicksum(
                 customer["h_i"] * I_st[customer["index"], time]
                 for customer in customers
-                for time in time_horizon_
+                for time in time_horizon_[1:]
             )
             + gp.quicksum(eta_t[time] for time in time_horizon)
         ),
@@ -65,11 +65,27 @@ def optimize(data):
         name="initial_supplier_inventory",
     )
 
+    model.addConstr(
+        (
+            gp.quicksum(x_st[customer["index"], 0] for customer in customers)
+            == 0
+        ),
+        name="initial_deliveries",
+    )
+
+    model.addConstr(
+        (
+            gp.quicksum(z_st[customer["index"], 0] for customer in customers)
+            == 0
+        ),
+        name="initial_visits",
+    )
+
     model.addConstrs(
         (
             B_t[time]
             == B_t[time - 1]
-            + supplier["r_i"]
+            + (supplier["r_i"] if time > 1 else 0)
             - gp.quicksum(x_st[customer["index"], time - 1] for customer in customers)
             for time in time_horizon_[1:]
         ),
@@ -100,11 +116,11 @@ def optimize(data):
             I_st[customer_index, time]
             == I_st[customer_index, time - 1]
             + x_st[customer_index, time - 1]
-            - customer_r
+            - (customer_r if time > 1 else 0)
             for customer_index, customer_r in [
                 [customer["index"], customer["r_i"]] for customer in customers
             ]
-            for time in time_horizon[1:]
+            for time in time_horizon_[1:]
         ),
         name="customer_inventory",
     )
@@ -181,8 +197,13 @@ def optimize(data):
                         ys += [customer["y"]]
                         visited += [customer["index"]]
                         variables += [z_st[customer["index"], time]]
-                    
-                if len(xs) < 2:
+                
+
+                tour_hash = '.'.join([str(node) for node in visited])
+                if tour_hash in solved_bsp:
+                    bsd_cost = solved_bsp[tour_hash][-1]
+
+                elif len(xs) < 2:
                     continue
 
                 elif len(xs) == 2:
@@ -192,7 +213,6 @@ def optimize(data):
                     bsd_cost = get_dist(xs[0], ys[0], xs[1], ys[1]) + get_dist(xs[1], ys[1], xs[2], ys[2]) + get_dist(xs[2], ys[2], xs[0], ys[0])
 
                 else:
-                    tour_hash = '.'.join([str(node) for node in visited])
                     if tour_hash in solved_bsp:
                         continue
 
@@ -200,7 +220,7 @@ def optimize(data):
                     bsd_sol = bsd_solver.solve(verbose=False)
                     bsd_cost = bsd_sol.optimal_value
 
-                    solved_bsp[tour_hash] = bsd_sol.tour.tolist()
+                    solved_bsp[tour_hash] = bsd_sol.tour.tolist() + [bsd_cost]
 
                 if eta < bsd_cost:
                     for _time in time_horizon:
@@ -213,7 +233,7 @@ def optimize(data):
     model.Params.LazyConstraints = 1
     model.optimize(benders_cuts)
 
-    for v in model.getVars():
-        print(v.varName, "=", v.x)
+    # for v in model.getVars():
+    #     print(v.varName, "=", v.x)
 
     return
