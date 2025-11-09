@@ -1,4 +1,8 @@
 import gurobipy as gp
+import math
+from concorde.tsp import TSPSolver
+
+solved_bsp = {}
 
 
 def optimize(data):
@@ -19,7 +23,7 @@ def optimize(data):
     z_st = model.addVars(
         [customer["index"] for customer in customers],
         [time for time in time_horizon],
-        vtype=gp.GRB.CONTINUOUS,
+        vtype=gp.GRB.BINARY,
         name="z_st",
     )
 
@@ -160,7 +164,56 @@ def optimize(data):
         name="vehicle_capacity",
     )
 
+    def get_dist(x_1, y_1, x_2, y_2):
+        return math.sqrt((x_1 - x_2)**2 + (y_1 - y_2)**2)
+
+    def benders_cuts(model, where):
+        if where == gp.GRB.Callback.MIPSOL:
+            for time in time_horizon:
+                xs = [supplier["x"]]
+                ys = [supplier["y"]]
+                visited = []
+                eta = model.cbGetSolution(eta_t[time])
+                variables = []
+                for customer in customers:
+                    if model.cbGetSolution(z_st[customer["index"], time]) > 0.99:
+                        xs += [customer["x"]]
+                        ys += [customer["y"]]
+                        visited += [customer["index"]]
+                        variables += [z_st[customer["index"], time]]
+                    
+                if len(xs) < 2:
+                    continue
+
+                elif len(xs) == 2:
+                    bsd_cost = 2 * get_dist(xs[0], ys[0], xs[1], ys[1])
+
+                elif len(xs) == 3:
+                    bsd_cost = get_dist(xs[0], ys[0], xs[1], ys[1]) + get_dist(xs[1], ys[1], xs[2], ys[2]) + get_dist(xs[2], ys[2], xs[0], ys[0])
+
+                else:
+                    tour_hash = '.'.join([str(node) for node in visited])
+                    if tour_hash in solved_bsp:
+                        continue
+
+                    bsd_solver = TSPSolver.from_data(xs, ys, norm="EUC_2D")
+                    bsd_sol = bsd_solver.solve(verbose=False)
+                    bsd_cost = bsd_sol.optimal_value
+
+                    solved_bsp[tour_hash] = bsd_sol.tour.tolist()
+
+                if eta < bsd_cost:
+                    for _time in time_horizon:
+                        model.cbLazy(
+                            eta_t[_time]
+                            >= bsd_cost * (1 + gp.quicksum(z_st[customer, _time] for customer in visited) - len(visited))
+                        )
+
     model.write("model.lp")
-    model.optimize()
+    model.Params.LazyConstraints = 1
+    model.optimize(benders_cuts)
+
+    for v in model.getVars():
+        print(v.varName, "=", v.x)
 
     return

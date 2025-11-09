@@ -12,8 +12,6 @@ def read_instance(file_path):
     data = {"supplier": {}, "customers": []}
 
     with open(file_path) as file:
-        file.readline()
-
         data["n"], data["H"], data["C"] = map(int, file.readline().split())
 
         index, x, y, B_i, r_i, h_0 = file.readline().split()
