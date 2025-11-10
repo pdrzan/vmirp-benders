@@ -30,6 +30,9 @@ def optimize(data):
             dist[j+1][i+1] = dist[i+1][j+1]
 
     model = gp.Model()
+    model.Params.LazyConstraints = 1
+    model.Params.Threads = 1
+    model.Params.TimeLimit = 30 * 60
 
     B_t = model.addVars(
         [time for time in time_horizon_],
@@ -332,11 +335,18 @@ def optimize(data):
                     for _time in time_horizon:
                         model.cbLazy(
                             eta_t[_time]
-                            >= bsd_cost * (1 + gp.quicksum(z_st[customer, _time] for customer in visited) - len(visited))
+                            # >= bsd_cost
+                            # * (1 + gp.quicksum(z_st[customer, _time] for customer in visited) - len(visited))
+                            >= bsd_cost * z_st[1, _time]
+                            - gp.quicksum(
+                                2
+                                * max([dist[customer-1][i-1] for i in (visited + [1])])
+                                * (1 - z_st[customer, _time])
+                                for customer in visited
+                                )
                         )
 
     model.write("model.lp")
-    model.Params.LazyConstraints = 1
     model.optimize(benders_cuts)
 
     # for v in model.getVars():
