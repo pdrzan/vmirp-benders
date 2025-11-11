@@ -232,7 +232,7 @@ def optimize(data):
             for i in nodes
             for time in time_horizon
         ),
-        name="a",
+        name="departing_edges",
     )
 
     model.addConstrs(
@@ -242,7 +242,7 @@ def optimize(data):
             for j in nodes
             for time in time_horizon
         ),
-        name="b",
+        name="arriving_edges",
     )
 
     model.addConstrs(
@@ -252,7 +252,7 @@ def optimize(data):
             for customer_index in [customer["index"] for customer in customers]
             for time in time_horizon
         ),
-        name="c",
+        name="position_lowerbound",
     )
 
     model.addConstrs(
@@ -261,18 +261,18 @@ def optimize(data):
             for customer_index in [customer["index"] for customer in customers]
             for time in time_horizon
         ),
-        name="d",
+        name="position_upperbound",
     )
 
     model.addConstrs(
         (
-            u_it[i, time] - u_it[j, time] + 1
+            u_it[i, time] + 1 - u_it[j, time]
             <= (len(customers) + 1) * (1 - v_ijt[i, j, time])
             for i in [customer["index"] for customer in customers]
             for j in [customer["index"] for customer in customers]
             for time in time_horizon
         ),
-        name="a",
+        name="flux_maintenence",
     )
 
     model.addConstrs(
@@ -285,7 +285,7 @@ def optimize(data):
                 for j in nodes if i!=j)
             for time in time_horizon
         ),
-        name="e",
+        name="benders_mtz_bounds",
     )
 
     def benders_cuts(model, where):
@@ -331,12 +331,10 @@ def optimize(data):
                         removed_sol = solved_list.pop(0)
                         del solved_bsp[removed_sol]
 
-                if eta < bsd_cost:
+                if eta < bsd_cost - 0.00001:
                     for _time in time_horizon:
                         model.cbLazy(
                             eta_t[_time]
-                            # >= bsd_cost
-                            # * (1 + gp.quicksum(z_st[customer, _time] for customer in visited) - len(visited))
                             >= bsd_cost * z_st[1, _time]
                             - gp.quicksum(
                                 2
