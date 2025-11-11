@@ -6,7 +6,7 @@ solved_bsp = {}
 solved_list = []
 
 
-def optimize(data):
+def optimize(data, time_limit):
     vehicle_capacity = data["C"]
     time_horizon = range(data["H"] + 1)
     time_horizon_ = range(data["H"] + 2)
@@ -32,7 +32,11 @@ def optimize(data):
     model = gp.Model()
     model.Params.LazyConstraints = 1
     model.Params.Threads = 1
-    model.Params.TimeLimit = 30 * 60
+    model.Params.TimeLimit = time_limit
+
+    stats = {}
+    stats["cuts_evaluated"] = 0
+    stats["cuts_added"] = 0
 
     B_t = model.addVars(
         [time for time in time_horizon_],
@@ -290,6 +294,7 @@ def optimize(data):
 
     def benders_cuts(model, where):
         if where == gp.GRB.Callback.MIPSOL:
+            stats["cuts_evaluated"] += 1
             for time in time_horizon:
                 xs = [supplier["x"]]
                 ys = [supplier["y"]]
@@ -332,6 +337,7 @@ def optimize(data):
                         del solved_bsp[removed_sol]
 
                 if eta < bsd_cost - 0.00001:
+                    stats["cuts_added"] += 1
                     for _time in time_horizon:
                         model.cbLazy(
                             eta_t[_time]
@@ -347,7 +353,9 @@ def optimize(data):
     model.write("model.lp")
     model.optimize(benders_cuts)
 
+    result = [model.Runtime, model.ObjVal, model.ObjBound, model.MIPGap, stats["cuts_added"], stats["cuts_evaluated"]]
+
     # for v in model.getVars():
     #     print(v.varName, "=", v.x)
 
-    return
+    return result
