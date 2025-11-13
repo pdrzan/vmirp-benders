@@ -35,7 +35,7 @@ def main():
         if item.is_dir():
                 folders.append(item.name)
 
-    sizes = [5*i for i in range(1,11)]
+    sizes = [5*i for i in range(1,6)]
     for size in sizes:
          for folder in folders:
               for i in range(1,6):
@@ -44,7 +44,7 @@ def main():
                         data = read_instance(file)
                         result = optimize(data, time_limit)
                         with open(f"results/{folder}/abs{i}n{size}.out", 'w') as f:
-                            f.write(";".join([file] + [f"{x:.4f}" for x in result]))
+                            f.write(";".join([str(size), str(i), file] + [f"{x:.4f}" for x in result]) + "\n")
 
 
 if __name__ == "__main__":

@@ -30,6 +30,8 @@ def main():
     data = read_instance(instance_file_path)
     result = optimize(data, time_limit)
     print(";".join([f"{x:.4f}" for x in result]))
+    with open(instance_file_path.replace("instances/", "results/"), 'w') as f:
+        f.write(";".join([instance_file_path] + [f"{x:.4f}" for x in result]) + "\n")
 
 
 if __name__ == "__main__":
