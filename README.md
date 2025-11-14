@@ -1,4 +1,4 @@
-# Brand-and-benders-cut for the Vendor-Managed Inventory Routing Problem
+# Branch-and-benders-cut for the Vendor-Managed Inventory Routing Problem
 
 
 This repository has a implementation of a *branch-and-benders-cut* (B\&BC) algorithm for the Vendor-Managed Inventory Routing Problem (VMIR).
