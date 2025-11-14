@@ -21,7 +21,7 @@ pip install -r requirements.txt
 With all dependencies installed, you can execute the algorithm with this command:
 
 ```bash
-src/main.py -i <instance-path> -t <time-limit-in-seconds>
+python src/main.py -i <instance-path> -t <time-limit-in-seconds>
 ```
 
 [^1]: Claudia Archetti, Luca Bertazzi, Gilbert Laporte, Maria Grazia Speranza, (2007) A Branch-and-Cut Algorithm for a Vendor-Managed Inventory-Routing Problem. Transportation Science 41(3):382-391.
